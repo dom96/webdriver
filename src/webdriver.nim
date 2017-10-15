@@ -110,6 +110,28 @@ proc getText*(self: Element): string =
 
   return respObj["value"].getStr()
 
+proc click*(self: Element) =
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id / 
+                 "element" / self.id / "click")
+  let obj = %*{}
+  let resp = self.session.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  discard checkResponse(resp.body)
+  
+# Note: There currently is an open bug in geckodriver that causes DOM events not to fire when sending keys.
+# https://github.com/mozilla/geckodriver/issues/348
+proc sendKeys*(self: Element, text: string) =
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id / 
+                 "element" / self.id / "value")
+  let obj = %*{"text": text}
+  let resp = self.session.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  discard checkResponse(resp.body)
+
 when isMainModule:
   let webDriver = newWebDriver()
   let session = webDriver.createSession()
