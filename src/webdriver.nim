@@ -38,6 +38,13 @@ proc createSession*(self: WebDriver): Session =
 
   return Session(id: sessionObj["value"]["sessionId"].getStr(), driver: self)
 
+proc delete*(self: Session) =
+  let reqUrl = $(self.driver.url / "session" / self.id)
+  let resp = self.driver.client.request(reqUrl, httpMethod = HttpDelete)
+  let respObj = parseJson(resp.body)
+  if respObj{"value"}.getFields().len != 0:
+    raise newException(WebDriverException, $respObj)
+
 proc navigate*(self: Session, url: string) =
   let reqUrl = $(self.driver.url / "session" / self.id / "url")
   let obj = %*{"url": url}
