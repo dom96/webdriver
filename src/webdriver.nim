@@ -29,6 +29,11 @@ proc toKeyword(strategy: LocationStrategy): string =
   of TagNameSelector: "tag name"
   of XPathSelector: "xpath"
 
+proc checkResponse(resp: string): JsonNode =
+  result = parseJson(resp)
+  if result{"value"}.isNil:
+    raise newException(WebDriverException, $result)
+
 proc newWebDriver*(url: string = "http://localhost:4444"): WebDriver =
   WebDriver(url: url.parseUri, client: newHttpClient())
 
@@ -43,7 +48,7 @@ proc createSession*(self: WebDriver): Session =
     let msg = "Readiness message does not follow spec"
     raise newException(ProtocolException, msg)
 
-  if not obj{"value", "ready"}.getBVal():
+  if not obj{"value", "ready"}.getBool():
     raise newException(WebDriverException, "WebDriver is not ready")
 
   # Create our session.
@@ -71,9 +76,7 @@ proc getPageSource*(self: Session): string =
   let reqUrl = $(self.driver.url / "session" / self.id / "source")
   let resp = self.driver.client.getContent(reqUrl)
 
-  let respObj = parseJson(resp)
-  if respObj{"value"}.isNil:
-    raise newException(WebDriverException, $respObj)
+  let respObj = checkResponse(resp)
 
   return respObj{"value"}.getStr()
 
@@ -83,9 +86,7 @@ proc findElement*(self: Session, selector: string,
   let reqObj = %*{"using": toKeyword(strategy), "value": selector}
   let resp = self.driver.client.postContent(reqUrl, $reqObj)
 
-  let respObj = parseJson(resp)
-  if respObj{"value"}.isNil:
-    raise newException(WebDriverException, $respObj)
+  let respObj = checkResponse(resp)
 
   for key, value in respObj["value"].getFields().pairs():
     return Element(id: value.getStr(), session: self)
@@ -94,9 +95,7 @@ proc getText*(self: Element): string =
   let reqUrl = $(self.session.driver.url / "session" / self.session.id /
                  "element" / self.id / "text")
   let resp = self.session.driver.client.getContent(reqUrl)
-  let respObj = parseJson(resp)
-  if respObj{"value"}.isNil:
-    raise newException(WebDriverException, $respObj)
+  let respObj = checkResponse(resp)
 
   return respObj["value"].getStr()
 
