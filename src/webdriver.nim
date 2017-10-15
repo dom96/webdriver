@@ -1,4 +1,4 @@
-import httpclient, uri, json, tables
+import httpclient, uri, json, tables, options
 
 type
   WebDriver* = ref object
@@ -61,6 +61,12 @@ proc createSession*(self: WebDriver): Session =
 
   return Session(id: sessionObj["value"]["sessionId"].getStr(), driver: self)
 
+proc close*(self: Session) =
+  let reqUrl = $(self.driver.url / "session" / self.id)
+  let resp = self.driver.client.request(reqUrl, HttpDelete)
+
+  let respObj = checkResponse(resp.body)
+
 proc navigate*(self: Session, url: string) =
   ## Instructs the session to navigate to the specified URL.
   let reqUrl = $(self.driver.url / "session" / self.id / "url")
@@ -81,15 +87,20 @@ proc getPageSource*(self: Session): string =
   return respObj{"value"}.getStr()
 
 proc findElement*(self: Session, selector: string,
-                  strategy = CssSelector): Element =
+                  strategy = CssSelector): Option[Element] =
   let reqUrl = $(self.driver.url / "session" / self.id / "element")
   let reqObj = %*{"using": toKeyword(strategy), "value": selector}
-  let resp = self.driver.client.postContent(reqUrl, $reqObj)
+  let resp = self.driver.client.post(reqUrl, $reqObj)
+  if resp.status == Http404:
+    return none(Element)
 
-  let respObj = checkResponse(resp)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  let respObj = checkResponse(resp.body)
 
   for key, value in respObj["value"].getFields().pairs():
-    return Element(id: value.getStr(), session: self)
+    return some(Element(id: value.getStr(), session: self))
 
 proc getText*(self: Element): string =
   let reqUrl = $(self.session.driver.url / "session" / self.session.id /
@@ -106,4 +117,6 @@ when isMainModule:
                   "Entertainment-System/dp/B073BVHY3F"
   session.navigate(amazonUrl)
 
-  echo session.findElement("#priceblock_ourprice").getText()
+  echo session.findElement("#priceblock_ourprice").get().getText()
+
+  session.close()
