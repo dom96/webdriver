@@ -43,12 +43,13 @@ proc createSession*(self: WebDriver): Session =
   # Check the readiness of the Web Driver.
   let resp = self.client.getContent($(self.url / "status"))
   let obj = parseJson(resp)
+  let ready = obj{"value", "ready"}
 
-  if obj{"value", "ready"}.isNil():
+  if ready.isNil():
     let msg = "Readiness message does not follow spec"
     raise newException(ProtocolException, msg)
 
-  if not obj{"value", "ready"}.getBool():
+  if not ready.getBool():
     raise newException(WebDriverException, "WebDriver is not ready")
 
   # Create our session.
@@ -56,10 +57,11 @@ proc createSession*(self: WebDriver): Session =
   let sessionResp = self.client.postContent($(self.url / "session"),
                                             $sessionReq)
   let sessionObj = parseJson(sessionResp)
-  if sessionObj{"value", "sessionId"}.isNil():
+  let sessionId = sessionObj{"value", "sessionId"}
+  if sessionId.isNil():
     raise newException(ProtocolException, "No sessionId in response to request")
 
-  return Session(id: sessionObj["value"]["sessionId"].getStr(), driver: self)
+  return Session(id: sessionId.getStr(), driver: self)
 
 proc close*(self: Session) =
   let reqUrl = $(self.driver.url / "session" / self.id)
