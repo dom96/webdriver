@@ -1,4 +1,6 @@
-import httpclient, uri, json, tables, options
+# For reference, this is brilliant: https://github.com/jlipps/simple-wd-spec
+
+import httpclient, uri, json, tables, options, strutils, unicode
 
 type
   WebDriver* = ref object
@@ -121,14 +123,63 @@ proc click*(self: Element) =
     raise newException(WebDriverException, resp.status)
 
   discard checkResponse(resp.body)
-  
+
 # Note: There currently is an open bug in geckodriver that causes DOM events not to fire when sending keys.
 # https://github.com/mozilla/geckodriver/issues/348
 proc sendKeys*(self: Element, text: string) =
-  let reqUrl = $(self.session.driver.url / "session" / self.session.id / 
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id /
                  "element" / self.id / "value")
   let obj = %*{"text": text}
   let resp = self.session.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  discard checkResponse(resp.body)
+
+type
+  # https://w3c.github.io/webdriver/#keyboard-actions
+  Key* = enum
+    Unidentified = 0,
+    Cancel,
+    Help,
+    Backspace,
+    Tab,
+    Clear,
+    Return,
+    Enter,
+    Shift,
+    Control,
+    Alt,
+    Pause,
+    Escape
+
+proc toUnicode(key: Key): Rune =
+  Rune(0xE000 + ord(key))
+
+proc press*(self: Session, keys: varargs[Key]) =
+  let reqUrl = $(self.driver.url / "session" / self.id / "actions")
+  let obj = %*{"actions": [
+    {
+      "type": "key",
+      "id": "keyboard",
+      "actions": []
+    }
+  ]}
+  for key in keys:
+    obj["actions"][0]["actions"].elems.add(
+      %*{
+        "type": "keyDown",
+        "value": $toUnicode(key)
+      }
+    )
+    obj["actions"][0]["actions"].elems.add(
+      %*{
+        "type": "keyUp",
+        "value": $toUnicode(key)
+      }
+    )
+
+  let resp = self.driver.client.post(reqUrl, $obj)
   if resp.status != Http200:
     raise newException(WebDriverException, resp.status)
 
