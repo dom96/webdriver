@@ -114,6 +114,17 @@ proc getText*(self: Element): string =
 
   return respObj["value"].getStr()
 
+proc clear*(self: Element) =
+  ## Clears an element of text/input
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id /
+                 "element" / self.id / "clear")
+  let obj = %*{}
+  let resp = self.session.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  discard checkResponse(resp.body)
+
 proc click*(self: Element) =
   let reqUrl = $(self.session.driver.url / "session" / self.session.id / 
                  "element" / self.id / "click")
