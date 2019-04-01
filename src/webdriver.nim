@@ -196,6 +196,13 @@ proc press*(self: Session, keys: varargs[Key]) =
 
   discard checkResponse(resp.body)
 
+proc takeScreenshot*(self: Session): string =
+  let reqUrl = $(self.driver.url / "session" / self.id / "screenshot")
+  let resp = self.driver.client.getContent(reqUrl)
+  let respObj = checkResponse(resp)
+
+  return respObj["value"].getStr()
+
 when isMainModule:
   let webDriver = newWebDriver()
   let session = webDriver.createSession()
