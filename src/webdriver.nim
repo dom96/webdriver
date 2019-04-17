@@ -203,6 +203,37 @@ proc takeScreenshot*(self: Session): string =
 
   return respObj["value"].getStr()
 
+proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
+  let reqUrl = $(self.driver.url / "session" / self.id / "execute/sync")
+  let obj = %*{
+    "script": code,
+    "args": []
+  }
+  for arg in args:
+    obj["args"].elems.add arg
+
+  let resp = self.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  return checkResponse(resp.body)["value"]
+
+proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
+  let reqUrl = $(self.driver.url / "session" / self.id / "execute/async")
+  let obj = %*{
+    "script": code,
+    "args": []
+  }
+  for arg in args:
+    obj["args"].elems.add arg
+
+  let resp = self.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  return checkResponse(resp.body)["value"]
+
+
 when isMainModule:
   let webDriver = newWebDriver()
   let session = webDriver.createSession()
