@@ -15,6 +15,15 @@ type
     session: Session
     id*: string
 
+  Cookie* = object
+    name*: string
+    value*: string
+    path*: Option[string]
+    domain*: Option[string]
+    secure*: Option[bool]
+    httpOnly*: Option[bool]
+    expiry*: Option[BiggestInt]
+
   LocationStrategy* = enum
     CssSelector, LinkTextSelector, PartialLinkTextSelector, TagNameSelector,
     XPathSelector
@@ -22,6 +31,7 @@ type
   WebDriverException* = object of Exception
 
   ProtocolException* = object of WebDriverException
+  JavascriptException* = object of WebDriverException
 
 proc toKeyword(strategy: LocationStrategy): string =
   case strategy
@@ -216,7 +226,11 @@ proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
   if resp.status != Http200:
     raise newException(WebDriverException, resp.status)
 
-  return checkResponse(resp.body)["value"]
+  let respObj = checkResponse(resp.body)
+  if respObj.hasKey("error"):
+    raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
+
+  return respObj
 
 proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
   let reqUrl = $(self.driver.url / "session" / self.id / "execute/async")
@@ -228,11 +242,96 @@ proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNo
     obj["args"].elems.add arg
 
   let resp = self.driver.client.post(reqUrl, $obj)
+  if resp.status != Http200 and resp.status != Http500:
+    raise newException(WebDriverException, resp.status)
+  
+  let respObj = checkResponse(resp.body)
+  if respObj.hasKey("error"):
+    raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
+
+  return respObj
+
+proc addCookie*(self: Session, cookie: Cookie) =
+  let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
+  let obj = %*  {
+    "cookie": {
+      "name": cookie.name,
+      "value": cookie.value,
+    }
+  }
+  if cookie.path.isSome:
+    obj["path"] = cookie.path.get.newJString()
+  if cookie.domain.isSome:
+    obj["domain"] = cookie.domain.get.newJString()
+  if cookie.secure.isSome:
+    obj["secure"] = cookie.secure.get.newJBool()
+  if cookie.httpOnly.isSome:
+    obj["httpOnly"] = cookie.httpOnly.get.newJBool()
+  if cookie.expiry.isSome:
+    obj["expiry"] = cookie.expiry.get.newJInt()
+
+  let resp = self.driver.client.post(reqUrl, $obj)
   if resp.status != Http200:
     raise newException(WebDriverException, resp.status)
 
-  return checkResponse(resp.body)["value"]
+  discard checkResponse(resp.body)
 
+proc getCookie*(self: Session, name: string): Cookie =
+  let reqUrl = $(self.driver.url / "session" / self.id / "cookie" / name)
+
+  let resp = self.driver.client.get(reqUrl)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  let cookie = checkResponse(resp.body)["value"]
+  result = Cookie(name: cookie["name"].getStr, value: cookie["value"].getStr)
+  if cookie.hasKey("path"):
+    result.path = some(cookie["path"].getStr)
+  if cookie.hasKey("domain"):
+    result.domain = some(cookie["domain"].getStr)
+  if cookie.hasKey("secure"):
+    result.secure = some(cookie["secure"].getBool)
+  if cookie.hasKey("httpOnly"):
+    result.httpOnly = some(cookie["httpOnly"].getBool)
+  if cookie.hasKey("expiry"):
+    result.expiry = some(cookie["expiry"].getBiggestInt)
+
+proc deleteCookie*(self: Session, name: string): Cookie =
+  let reqUrl = $(self.driver.url / "session" / self.id / "cookie" / name)
+
+  let resp = self.driver.client.delete(reqUrl)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+proc getAllCookies*(self: Session): seq[Cookie] =
+  let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
+
+  let resp = self.driver.client.get(reqUrl)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  let respObj = checkResponse(resp.body)
+  for cookie in respObj["value"].items:
+    var final = Cookie(name: cookie["name"].getStr, value: cookie["value"].getStr)
+    if cookie.hasKey("path"):
+      final.path = some(cookie["path"].getStr)
+    if cookie.hasKey("domain"):
+      final.domain = some(cookie["domain"].getStr)
+    if cookie.hasKey("secure"):
+      final.secure = some(cookie["secure"].getBool)
+    if cookie.hasKey("httpOnly"):
+      final.httpOnly = some(cookie["httpOnly"].getBool)
+    if cookie.hasKey("expiry"):
+      final.expiry = some(cookie["expiry"].getBiggestInt)
+    
+    result.add final
+
+proc deleteAllCookies*(self: Session): Cookie =
+  let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
+
+  let resp = self.driver.client.delete(reqUrl)
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
 
 when isMainModule:
   let webDriver = newWebDriver()
