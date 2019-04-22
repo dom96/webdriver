@@ -223,9 +223,6 @@ proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
     obj["args"].elems.add arg
 
   let resp = self.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
-    raise newException(WebDriverException, resp.status)
-
   let respObj = checkResponse(resp.body)
   if respObj.hasKey("error"):
     raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
@@ -242,9 +239,6 @@ proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNo
     obj["args"].elems.add arg
 
   let resp = self.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200 and resp.status != Http500:
-    raise newException(WebDriverException, resp.status)
-  
   let respObj = checkResponse(resp.body)
   if respObj.hasKey("error"):
     raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
@@ -274,14 +268,10 @@ proc addCookie*(self: Session, cookie: Cookie) =
   if resp.status != Http200:
     raise newException(WebDriverException, resp.status)
 
-  discard checkResponse(resp.body)
-
 proc getCookie*(self: Session, name: string): Cookie =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie" / name)
 
   let resp = self.driver.client.get(reqUrl)
-  if resp.status != Http200:
-    raise newException(WebDriverException, resp.status)
 
   let cookie = checkResponse(resp.body)["value"]
   result = Cookie(name: cookie["name"].getStr, value: cookie["value"].getStr)
