@@ -213,8 +213,8 @@ proc takeScreenshot*(self: Session): string =
 
   return respObj["value"].getStr()
 
-proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
-  let reqUrl = $(self.driver.url / "session" / self.id / "execute/sync")
+proc internalExecute(self: Session, code: string, args: varargs[JsonNode], kind: string): JsonNode =
+  let reqUrl = $(self.driver.url / "session" / self.id / "execute" / kind)
   let obj = %*{
     "script": code,
     "args": []
@@ -224,26 +224,16 @@ proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
 
   let resp = self.driver.client.post(reqUrl, $obj)
   let respObj = checkResponse(resp.body)
-  if respObj.hasKey("error"):
-    raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
+  if respObj["value"].hasKey("error"):
+    raise newException(JavascriptException, respObj["value"]["message"].getStr & "\n" & respObj["value"]["stacktrace"].getStr)
 
-  return respObj
+  return respObj["value"]
+
+proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
+  self.internalExecute(code, args, "sync")
 
 proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
-  let reqUrl = $(self.driver.url / "session" / self.id / "execute/async")
-  let obj = %*{
-    "script": code,
-    "args": []
-  }
-  for arg in args:
-    obj["args"].elems.add arg
-
-  let resp = self.driver.client.post(reqUrl, $obj)
-  let respObj = checkResponse(resp.body)
-  if respObj.hasKey("error"):
-    raise newException(JavascriptException, respObj["message"].getStr & "\n" & respObj["stacktrace"].getStr)
-
-  return respObj
+  self.internalExecute(code, args, "async")
 
 proc addCookie*(self: Session, cookie: Cookie) =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
