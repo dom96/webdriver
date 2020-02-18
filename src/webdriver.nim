@@ -141,6 +141,22 @@ proc getText*(self: Element): string =
 
   return respObj["value"].getStr()
 
+proc getAttribute*(self: Element, name: string): string =
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id /
+                 "element" / self.id / "attribute" / name)
+  let resp = self.session.driver.client.getContent(reqUrl)
+  let respObj = checkResponse(resp)
+
+  return respObj["value"].getStr()
+
+proc getProperty*(self: Element, name: string): string =
+  let reqUrl = $(self.session.driver.url / "session" / self.session.id /
+                 "element" / self.id / "property" / name)
+  let resp = self.session.driver.client.getContent(reqUrl)
+  let respObj = checkResponse(resp)
+
+  return respObj["value"].getStr()
+
 proc clear*(self: Element) =
   ## Clears an element of text/input
   let reqUrl = $(self.session.driver.url / "session" / self.session.id /
