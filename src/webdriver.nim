@@ -115,6 +115,23 @@ proc findElement*(self: Session, selector: string,
 
   for key, value in respObj["value"].getFields().pairs():
     return some(Element(id: value.getStr(), session: self))
+    
+proc findElements*(self: Session, selector: string,
+                  strategy = CssSelector): seq[Element] =
+  let reqUrl = $(self.driver.url / "session" / self.id / "elements")
+  let reqObj = %*{"using": toKeyword(strategy), "value": selector}
+  let resp = self.driver.client.post(reqUrl, $reqObj)
+  if resp.status == Http404:
+    return @[]
+
+  if resp.status != Http200:
+    raise newException(WebDriverException, resp.status)
+
+  let respObj = checkResponse(resp.body)
+
+  for element in respObj["value"].to(seq[JsonNode]):
+    for key, value in element.getFields().pairs():
+      result.add(Element(id: value.getStr(), session: self))
 
 proc getText*(self: Element): string =
   let reqUrl = $(self.session.driver.url / "session" / self.session.id /
