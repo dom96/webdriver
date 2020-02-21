@@ -33,6 +33,14 @@ type
   ProtocolException* = object of WebDriverException
   JavascriptException* = object of WebDriverException
 
+proc `%`*(element: Element): JsonNode =
+  result = %*{
+    "ELEMENT": element.id,
+    # This key is taken from the selenium python code. Not
+    # sure why they picked it, but it works
+    "element-6066-11e4-a52e-4f735466cecf": element.id
+  }
+
 proc toKeyword(strategy: LocationStrategy): string =
   case strategy
   of CssSelector: "css selector"
@@ -115,7 +123,7 @@ proc findElement*(self: Session, selector: string,
 
   for key, value in respObj["value"].getFields().pairs():
     return some(Element(id: value.getStr(), session: self))
-    
+
 proc findElements*(self: Session, selector: string,
                   strategy = CssSelector): seq[Element] =
   let reqUrl = $(self.driver.url / "session" / self.id / "elements")
@@ -250,22 +258,20 @@ proc internalExecute(self: Session, code: string, args: varargs[JsonNode], kind:
   let reqUrl = $(self.driver.url / "session" / self.id / "execute" / kind)
   let obj = %*{
     "script": code,
-    "args": []
+    "args": args
   }
-  for arg in args:
-    obj["args"].elems.add arg
 
   let resp = self.driver.client.post(reqUrl, $obj)
   let respObj = checkResponse(resp.body)
-  if respObj["value"].hasKey("error"):
+  if respObj["value"].kind == JObject and respObj["value"].hasKey("error"):
     raise newException(JavascriptException, respObj["value"]["message"].getStr & "\n" & respObj["value"]["stacktrace"].getStr)
 
   return respObj["value"]
 
-proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
+proc execute*(self: Session, code: string, args: varargs[JsonNode, `%`]): JsonNode =
   self.internalExecute(code, args, "sync")
 
-proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
+proc executeAsync*(self: Session, code: string, args: varargs[JsonNode, `%`]): JsonNode =
   self.internalExecute(code, args, "async")
 
 proc addCookie*(self: Session, cookie: Cookie) =
@@ -336,7 +342,7 @@ proc getAllCookies*(self: Session): seq[Cookie] =
       final.httpOnly = some(cookie["httpOnly"].getBool)
     if cookie.hasKey("expiry"):
       final.expiry = some(cookie["expiry"].getBiggestInt)
-    
+
     result.add final
 
 proc deleteAllCookies*(self: Session): Cookie =
