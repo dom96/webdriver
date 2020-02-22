@@ -268,11 +268,23 @@ proc internalExecute(self: Session, code: string, args: varargs[JsonNode], kind:
 
   return respObj["value"]
 
-proc execute*(self: Session, code: string, args: varargs[JsonNode, `%`]): JsonNode =
+proc execute*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
   self.internalExecute(code, args, "sync")
 
-proc executeAsync*(self: Session, code: string, args: varargs[JsonNode, `%`]): JsonNode =
+proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNode =
   self.internalExecute(code, args, "async")
+
+proc execute*(self: Session, code: string, args: varargs[Element]): JsonNode =
+  var newArgs = newSeq[JsonNode](args.len)
+  for i in 0 ..< args.len:
+    newArgs[i] = %args[i]
+  self.internalExecute(code, newArgs, "sync")
+
+proc executeAsync*(self: Session, code: string, args: varargs[Element]): JsonNode =
+  var newArgs = newSeq[JsonNode](args.len)
+  for i in 0 ..< args.len:
+    newArgs[i] = %args[i]
+  self.internalExecute(code, newArgs, "async")
 
 proc addCookie*(self: Session, cookie: Cookie) =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
