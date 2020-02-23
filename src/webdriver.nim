@@ -1,6 +1,6 @@
 # For reference, this is brilliant: https://github.com/jlipps/simple-wd-spec
 
-import httpclient, uri, json, tables, options, strutils, unicode
+import httpclient, uri, json, tables, options, strutils, unicode, sequtils
 
 type
   WebDriver* = ref object
@@ -275,16 +275,10 @@ proc executeAsync*(self: Session, code: string, args: varargs[JsonNode]): JsonNo
   self.internalExecute(code, args, "async")
 
 proc execute*(self: Session, code: string, args: varargs[Element]): JsonNode =
-  var newArgs = newSeq[JsonNode](args.len)
-  for i in 0 ..< args.len:
-    newArgs[i] = %args[i]
-  self.internalExecute(code, newArgs, "sync")
+  self.internalExecute(code, args.mapIt(%it), "sync")
 
 proc executeAsync*(self: Session, code: string, args: varargs[Element]): JsonNode =
-  var newArgs = newSeq[JsonNode](args.len)
-  for i in 0 ..< args.len:
-    newArgs[i] = %args[i]
-  self.internalExecute(code, newArgs, "async")
+  self.internalExecute(code, args.mapIt(%it), "async")
 
 proc addCookie*(self: Session, cookie: Cookie) =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
