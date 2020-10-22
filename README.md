@@ -10,4 +10,4 @@ https://www.youtube.com/watch?v=583BwZ7uSro&index=1&list=PLm-fq5xBdPkrMuVkPWuho7
 
 I have prepared an example repo showing how to test a sample Jester app using Travis with this library, available here: https://github.com/dom96/geckodriver-travis.
 
-For a larger example you can have a look at the Nimforum: https://github.com/nim-lang/7d8417ff97/tree/master/tests
+For a larger example you can have a look at the Nimforum: https://github.com/nim-lang/nimforum/tree/master/tests
