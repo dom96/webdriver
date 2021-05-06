@@ -34,7 +34,7 @@ type
   JavascriptException* = object of WebDriverException
 
 let
-  defaultSessionCapabilities = %*{"capabilities": {"browserName": "firefox"}}
+  defaultSessionCapabilities* = %*{"capabilities": {"browserName": "firefox"}}
 
 proc `%`*(element: Element): JsonNode =
   result = %*{
