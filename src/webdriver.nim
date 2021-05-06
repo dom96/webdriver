@@ -33,6 +33,9 @@ type
   ProtocolException* = object of WebDriverException
   JavascriptException* = object of WebDriverException
 
+let
+  defaultSessionCapabilities* = %*{"capabilities": {"browserName": "firefox"}}
+
 proc `%`*(element: Element): JsonNode =
   result = %*{
     "ELEMENT": element.id,
@@ -57,7 +60,7 @@ proc checkResponse(resp: string): JsonNode =
 proc newWebDriver*(url: string = "http://localhost:4444"): WebDriver =
   WebDriver(url: url.parseUri, client: newHttpClient())
 
-proc createSession*(self: WebDriver): Session =
+proc createSession*(self: WebDriver, capabilities: JsonNode = defaultSessionCapabilities): Session =
   ## Creates a new browsing session.
 
   # Check the readiness of the Web Driver.
@@ -73,9 +76,8 @@ proc createSession*(self: WebDriver): Session =
     raise newException(WebDriverException, "WebDriver is not ready")
 
   # Create our session.
-  let sessionReq = %*{"capabilities": {"browserName": "firefox"}}
   let sessionResp = self.client.postContent($(self.url / "session"),
-                                            $sessionReq)
+                                            $capabilities)
   let sessionObj = parseJson(sessionResp)
   let sessionId = sessionObj{"value", "sessionId"}
   if sessionId.isNil():
@@ -102,6 +104,15 @@ proc navigate*(self: Session, url: string) =
 proc getPageSource*(self: Session): string =
   ## Retrieves the specified session's page source.
   let reqUrl = $(self.driver.url / "session" / self.id / "source")
+  let resp = self.driver.client.getContent(reqUrl)
+
+  let respObj = checkResponse(resp)
+
+  return respObj{"value"}.getStr()
+
+proc getUrl*(self: Session): string =
+  ## Retrieves the specified session's page source.
+  let reqUrl = $(self.driver.url / "session" / self.id / "url")
   let resp = self.driver.client.getContent(reqUrl)
 
   let respObj = checkResponse(resp)
