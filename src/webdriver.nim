@@ -124,10 +124,10 @@ proc findElement*(self: Session, selector: string,
   let reqUrl = $(self.driver.url / "session" / self.id / "element")
   let reqObj = %*{"using": toKeyword(strategy), "value": selector}
   let resp = self.driver.client.post(reqUrl, $reqObj)
-  if resp.status == Http404:
+  if resp.status == $Http404:
     return none(Element)
 
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   let respObj = checkResponse(resp.body)
@@ -140,10 +140,10 @@ proc findElements*(self: Session, selector: string,
   let reqUrl = $(self.driver.url / "session" / self.id / "elements")
   let reqObj = %*{"using": toKeyword(strategy), "value": selector}
   let resp = self.driver.client.post(reqUrl, $reqObj)
-  if resp.status == Http404:
+  if resp.status == $Http404:
     return @[]
 
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   let respObj = checkResponse(resp.body)
@@ -182,7 +182,7 @@ proc clear*(self: Element) =
                  "element" / self.id / "clear")
   let obj = %*{}
   let resp = self.session.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   discard checkResponse(resp.body)
@@ -192,7 +192,7 @@ proc click*(self: Element) =
                  "element" / self.id / "click")
   let obj = %*{}
   let resp = self.session.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   discard checkResponse(resp.body)
@@ -204,7 +204,7 @@ proc sendKeys*(self: Element, text: string) =
                  "element" / self.id / "value")
   let obj = %*{"text": text}
   let resp = self.session.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   discard checkResponse(resp.body)
@@ -253,7 +253,7 @@ proc press*(self: Session, keys: varargs[Key]) =
     )
 
   let resp = self.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   discard checkResponse(resp.body)
@@ -311,7 +311,7 @@ proc addCookie*(self: Session, cookie: Cookie) =
     obj["expiry"] = cookie.expiry.get.newJInt()
 
   let resp = self.driver.client.post(reqUrl, $obj)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
 proc getCookie*(self: Session, name: string): Cookie =
@@ -336,14 +336,14 @@ proc deleteCookie*(self: Session, name: string): Cookie =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie" / name)
 
   let resp = self.driver.client.delete(reqUrl)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
 proc getAllCookies*(self: Session): seq[Cookie] =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
 
   let resp = self.driver.client.get(reqUrl)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
   let respObj = checkResponse(resp.body)
@@ -366,7 +366,7 @@ proc deleteAllCookies*(self: Session): Cookie =
   let reqUrl = $(self.driver.url / "session" / self.id / "cookie")
 
   let resp = self.driver.client.delete(reqUrl)
-  if resp.status != Http200:
+  if resp.status != $Http200:
     raise newException(WebDriverException, resp.status)
 
 when isMainModule:
