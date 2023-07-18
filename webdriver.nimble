@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.0"
+version       = "0.3.0"
 author        = "Dominik Picheta"
 description   = "Implementation of the WebDriver w3c spec."
 license       = "MIT"
